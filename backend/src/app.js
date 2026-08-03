@@ -12,6 +12,15 @@ app.use(cors({ origin: process.env.CLIENT_URL || "*" }));
 app.use(express.json({ limit: "2mb" }));
 if (process.env.NODE_ENV !== "test") app.use(morgan("dev"));
 
+// Friendly root route so the base URL isn't a bare 404.
+app.get("/", (req, res) =>
+  res.json({
+    service: "fruit-wine-compliance-api",
+    status: "running",
+    docs: "See /api/health and /api/batches",
+  })
+);
+
 // Health check — must work even if the DB is down, so it comes BEFORE the gate.
 app.get("/api/health", (req, res) =>
   res.json({
