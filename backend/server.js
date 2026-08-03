@@ -4,18 +4,25 @@ dotenv.config();
 import app from "./src/app.js";
 import connectDB from "./src/config/db.js";
 
-const PORT = process.env.PORT || 5000;
+// On Vercel / AWS Lambda the platform imports this module and invokes the
+// exported app per-request — it must NOT open its own port listener there.
+const isServerless = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+);
 
-const start = async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, () =>
-      console.log(`🍷  API running on http://localhost:${PORT}`)
-    );
-  } catch (err) {
-    console.error("❌  Failed to start server:", err.message);
-    process.exit(1);
-  }
-};
+if (!isServerless) {
+  const PORT = process.env.PORT || 5000;
+  connectDB()
+    .then(() =>
+      app.listen(PORT, () =>
+        console.log(`🍷  API running on http://localhost:${PORT}`)
+      )
+    )
+    .catch((err) => {
+      console.error("❌  Startup failed:", err.message);
+      process.exit(1);
+    });
+}
 
-start();
+// Vercel/Lambda entry point:
+export default app;

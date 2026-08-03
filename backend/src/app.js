@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 
+import connectDB from "./config/db.js";
 import batchRoutes from "./routes/batchRoutes.js";
 import { notFound, errorHandler } from "./middlewares/errorMiddleware.js";
 
@@ -11,7 +12,7 @@ app.use(cors({ origin: process.env.CLIENT_URL || "*" }));
 app.use(express.json({ limit: "2mb" }));
 if (process.env.NODE_ENV !== "test") app.use(morgan("dev"));
 
-// Health check
+// Health check — must work even if the DB is down, so it comes BEFORE the gate.
 app.get("/api/health", (req, res) =>
   res.json({
     status: "ok",
@@ -19,6 +20,17 @@ app.get("/api/health", (req, res) =>
     time: new Date().toISOString(),
   })
 );
+
+// Ensure a (cached) DB connection before any data route. Required for
+// serverless, where the app is imported without a startup listener.
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Feature routes
 app.use("/api/batches", batchRoutes);
